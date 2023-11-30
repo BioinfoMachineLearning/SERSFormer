@@ -252,8 +252,7 @@ def train_pesticide_classifier():
     test_size = len(dataset) - (train_size+val_size)
     dataset_train,dataset_valid,dataset_test = torch.utils.data.random_split(dataset, [train_size, val_size,test_size])
     
-    #dataset_valid = MicrographDataValid(DATASET_DIR)
-    #dataset_test = MicrographDataValid(DATASET_DIR) # using validation data for testing here
+    # using validation data for testing here
     train_loader = DataLoader(dataset=dataset_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=args.num_dataloader_workers)
     print(train_size)
     valid_loader = DataLoader(dataset=dataset_valid, batch_size=BATCH_SIZE, shuffle=False, num_workers=args.num_dataloader_workers)
@@ -279,39 +278,4 @@ def train_pesticide_classifier():
 
 if __name__ == "__main__":
     train_pesticide_classifier()
-    '''predict_class = [p[0].item() for p in predict]
-    predict_reg = [p[1].item() for p in predict]
-    targets_class = list()
-    targets_reg = []
-    
-    for i in range(len(dataset_test)):
-        pest_datas = dataset_test[i]
-        pest_data = pest_datas[2]
-        pest_class_label = pest_datas[0]
-        pest_reg_label = pest_datas[1]
-        targets_class.append(pest_class_label)
-        targets_reg.append(pest_reg_label)
-    metrics_class = MetricCollection([MulticlassAccuracy(num_classes=Num_classes),
-                                         MulticlassPrecision(num_classes=Num_classes),
-                                         MulticlassRecall(num_classes=Num_classes),
-                                         MulticlassF1Score(num_classes=Num_classes)])
-    metrics_regress = MetricCollection([ MeanSquaredError(),
-                                                 R2Score(),
-                                                 MeanAbsoluteError()])
-    metric_log_class = metrics_class(torch.tensor(predict_class), torch.tensor(targets_class).squeeze())
-    print(metric_log_class)
-    metric_log_reg = metrics_class(torch.tensor(predict_reg), torch.tensor(targets_reg))
-    print(metric_log_reg)
-
-    bcm = MulticlassConfusionMatrix(num_classes=Num_classes)
-    # Generate the confusion matrix
-    cm = bcm(torch.tensor(predict), torch.tensor(targets_class).squeeze())
-
-    # Create the heatmap of the confusion matrix
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(cm, annot=True, cmap="Blues", fmt="d")
-    plt.title("Confusion Matrix")
-    plt.xlabel("Predicted Label")
-    plt.ylabel("True Label")
-    plt.savefig("eval.png")
-    # plt.show()'''
+ 

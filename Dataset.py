@@ -7,7 +7,7 @@ import numpy as np
 from pandas import read_csv
 import re
 import scipy.signal as signal
-DATASET_DIR = "/home/aghktb/AI-SERS"
+DATASET_DIR = "."
 
 label_dict = {'No_pest_present':0,'Thiabenzadole_present':1,'Phosmet_present':2,'Carbophenothion_present':3,'Coumaphos_present':4,'Oxamyl_present':5}
 Num_classes = len(label_dict)

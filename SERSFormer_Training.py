@@ -9,7 +9,7 @@ from typing import List, Union
 from lightning.pytorch.utilities.types import EPOCH_OUTPUT
 import torch
 import lightning as pl
-from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
+from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 import torch.nn as nn
 import numpy as np
@@ -27,10 +27,10 @@ from torchmetrics import MetricCollection
 from torchmetrics.classification import BinaryAccuracy, BinaryRecall, BinaryPrecision, BinaryConfusionMatrix, BinaryF1Score,MulticlassAccuracy,MulticlassPrecision,MulticlassRecall,MulticlassF1Score,MulticlassConfusionMatrix
 from torchmetrics.regression import MeanSquaredError,R2Score,MeanAbsoluteError,SpearmanCorrCoef
 from scipy.stats import gaussian_kde
-from Model_v2 import TransformerClassifyRegress_con,TransformerClassifyRegress_sep
+from Model_v2 import TransformerClassifyRegress_sep
 from argparse import ArgumentParser
 import scipy.signal as signal
-from Dataset import SERSDatav2,SERSDatav3,SERSDatav3test
+from Dataset import SERSDatav3,SERSDatav3test
 AVAIL_GPUS = [0,1,2]
 NUM_NODES = 1
 BATCH_SIZE = 32
@@ -62,7 +62,7 @@ os.makedirs(CHECKPOINT_PATH, exist_ok=True)
 class SERSClassifyRegress(pl.LightningModule):
     def __init__(self, learning_rate=1e-4,attn_head=ATT_HEAD,encoder_layers=ENCODE_LAYERS,n_class=1, **model_kwargs):
         super().__init__()
-        self.test_datasets = ["dataloader0","dataloader1"]
+        
         self.num_outputs = 1
         self.save_hyperparameters()
         
@@ -98,69 +98,6 @@ class SERSClassifyRegress(pl.LightningModule):
                'monitor':metric_to_track,
                'watch':self.logger.watch(self.model)}
     
-    def custom_viz(self,kernels, path=None, cols=None):
-        """Visualize weight and activation matrices learned 
-        during the optimization process. Works for any size of kernels.
-        
-        Arguments
-        =========
-        kernels: Weight or activation matrix. Must be a high dimensional
-        Numpy array. Tensors will not work.
-        path: Path to save the visualizations.
-        cols: TODO: Number of columns (doesn't work completely yet.)
-        
-        Example
-        =======
-        kernels = model.conv1.weight.cpu().detach().clone()
-        kernels = kernels - kernels.min()
-        kernels = kernels / kernels.max()
-        custom_viz(kernels, 'results/conv1_weights.png', 5)
-        """
-        def set_size(w,h, ax=None):
-            """ w, h: width, height in inches """
-            if not ax: ax=plt.gca()
-            l = ax.figure.subplotpars.left
-            r = ax.figure.subplotpars.right
-            t = ax.figure.subplotpars.top
-            b = ax.figure.subplotpars.bottom
-            figw = float(w)/(r-l)
-            figh = float(h)/(t-b)
-            ax.figure.set_size_inches(figw, figh)
-    
-        N = kernels.shape[0]
-        C = kernels.shape[1]
-
-        Tot = N*C
-
-    # If single channel kernel with HxW size,# plot them in a row.# Else, plot image with C number of columns.
-        if C>1:
-            columns = C
-        elif cols==None:
-            columns = N
-        elif cols:
-            columns = cols
-        rows = Tot // columns 
-        rows += Tot % columns
-
-        pos = range(1,Tot + 1)
-
-        fig = plt.figure(1)
-        fig.tight_layout()
-        k=0
-        for i in range(kernels.shape[0]):
-            for j in range(kernels.shape[1]):
-                img = kernels[i][j]
-                ax = fig.add_subplot(rows,columns,pos[k])
-                #ax.imshow(img, cmap='gray')
-                plt.axis('off')
-                k = k+1
-
-        set_size(30,30,ax)
-        if path:
-            plt.savefig(path, dpi=100)
-    
-        #plt.show()
-        return fig
     
     def training_step(self,batch,batch_idx):
         batch_data = batch[2:]
@@ -227,12 +164,7 @@ class SERSClassifyRegress(pl.LightningModule):
         loss_reg = self.loss_fn_reg(conc_pred,batch_conc)
         metric_log_reg = self.test_metrics_regress(conc_pred, batch_conc.float())
         self.log_dict(metric_log_reg)
-        
-
-        
-        print("Test Data Confusion Matrix: \n")
-       
-        
+        print("Test Data Confusion Matrix: \n") 
         self.log('test_loss_class', loss_class, on_step=True, on_epoch=True, sync_dist=True)
         self.log('test_loss_reg', loss_reg, on_step=True, on_epoch=True, sync_dist=True)
         loss = (loss_class+loss_reg)/2
@@ -244,7 +176,7 @@ class SERSClassifyRegress(pl.LightningModule):
         
           
     
-    def test_epoch_end(self, outputs: EPOCH_OUTPUT | List[EPOCH_OUTPUT]) -> None:
+    def on_test_epoch_end(self, outputs: EPOCH_OUTPUT | List[EPOCH_OUTPUT]) -> None:
         # Log individual results for each dataset
         
         #for i  in range(len(outputs)):
@@ -309,6 +241,7 @@ class SERSClassifyRegress(pl.LightningModule):
         parser.add_argument('--attn_head',type=int,default=ATT_HEAD)
         parser.add_argument('--encoder_layers',type=int,default=ENCODE_LAYERS)
         parser.add_argument('--n_class',type=int,default=1)
+        parser.add_argument('--entity_name', type=str,default=None, help="Weights and Biases entity name")
         return parser
 
 
@@ -328,8 +261,8 @@ def train_pesticide_classifier():
     parser.add_argument('--batch_size', default=BATCH_SIZE, type=int,
                         help="effective_batch_size = batch_size * num_gpus * num_nodes")
     parser.add_argument('--num_dataloader_workers', type=int, default=DATALOADERS)
-    parser.add_argument('--entity_name', type=str, default='aghktb', help="Weights and Biases entity name")
-    parser.add_argument('--project_name', type=str, default='SERSClassifyRegress',
+    
+    parser.add_argument('--project_name', type=str, default='SERSFormer',
                         help="Weights and Biases project name")
     parser.add_argument('--save_dir', type=str, default=CHECKPOINT_PATH, help="Directory in which to save models")
 
@@ -359,8 +292,7 @@ def train_pesticide_classifier():
     test_size = len(dataset) - (train_size+val_size)
     dataset_train,dataset_valid,dataset_test = torch.utils.data.random_split(dataset, [train_size, val_size,test_size])
     
-    #dataset_valid = MicrographDataValid(DATASET_DIR)
-    #dataset_test = MicrographDataValid(DATASET_DIR) # using validation data for testing here
+    # using validation data for testing here
     train_loader = DataLoader(dataset=dataset_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=args.num_dataloader_workers)
     print(train_size)
     valid_loader = DataLoader(dataset=dataset_valid, batch_size=BATCH_SIZE, shuffle=False, num_workers=args.num_dataloader_workers)
@@ -376,15 +308,14 @@ def train_pesticide_classifier():
     early_stopping_callback = EarlyStopping(monitor='valid_loss', mode='min', min_delta=0.0, patience=10)
     trainer.callbacks = [checkpoint_callback, lr_monitor, early_stopping_callback]
     
-    #wandb.init(project=args.project_name, entity=args.entity_name,name=args.save_dir,sync_tensorboard=True).watch(model)
     logger = WandbLogger(project=args.project_name, entity=args.entity_name,name=args.save_dir, offline=False, save_dir=".",sync_tensorboard=True)
-    logger1 = TensorBoardLogger(save_dir=".",name=args.save_dir)
+    
     trainer.logger = logger
     
     trainer.fit(model, train_loader, valid_loader)
     trainer.test(dataloaders=test_loader, ckpt_path='best')
     
-    #trainer.test(dataloaders=test_loader2, ckpt_path='best')
+    
    
 
 
@@ -393,40 +324,3 @@ if __name__ == "__main__":
     
     train_pesticide_classifier()
     #wandb.finish()
-
-    '''predict_class = [p[0].item() for p in predict]
-    predict_reg = [p[1].item() for p in predict]
-    targets_class = list()
-    targets_reg = []
-    
-    for i in range(len(dataset_test)):
-        pest_datas = dataset_test[i]
-        pest_data = pest_datas[2]
-        pest_class_label = pest_datas[0]
-        pest_reg_label = pest_datas[1]
-        targets_class.append(pest_class_label)
-        targets_reg.append(pest_reg_label)
-    metrics_class = MetricCollection([MulticlassAccuracy(num_classes=Num_classes),
-                                         MulticlassPrecision(num_classes=Num_classes),
-                                         MulticlassRecall(num_classes=Num_classes),
-                                         MulticlassF1Score(num_classes=Num_classes)])
-    metrics_regress = MetricCollection([ MeanSquaredError(),
-                                                 R2Score(),
-                                                 MeanAbsoluteError()])
-    metric_log_class = metrics_class(torch.tensor(predict_class), torch.tensor(targets_class).squeeze())
-    print(metric_log_class)
-    metric_log_reg = metrics_class(torch.tensor(predict_reg), torch.tensor(targets_reg))
-    print(metric_log_reg)
-
-    bcm = MulticlassConfusionMatrix(num_classes=Num_classes)
-    # Generate the confusion matrix
-    cm = bcm(torch.tensor(predict), torch.tensor(targets_class).squeeze())
-
-    # Create the heatmap of the confusion matrix
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(cm, annot=True, cmap="Blues", fmt="d")
-    plt.title("Confusion Matrix")
-    plt.xlabel("Predicted Label")
-    plt.ylabel("True Label")
-    plt.savefig("eval.png")
-    # plt.show()'''

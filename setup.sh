@@ -21,4 +21,4 @@ pip install pytorch-lightning==1.8.6
 # Install other required packages from required_packages.txt
 while read package; do
     conda install -y $package
-done < required_packages.txt
+done < required_packges.txt

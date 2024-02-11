@@ -26,7 +26,10 @@ python SERSFormer_Training.py \
 ```
 SERSFormer uses Wandb for logging all the metrics and training parameters. Provide wandb login username in the arguement to monitor training in realtime. It can be customized to log any media, text, images, graphs, gradients, and metrics. For more information on setting up wandb, please visit the documentation https://docs.wandb.ai/guides/integrations/lightning
 
+**Cite Us**
 
 If this repository is useful, please cite us.
+
+Hajikhani, M., Hegde, A., Snyder, J., Cheng, J., & Lin, M. (2024). A Machine Learning Approach for Rapid Detection of Pesticides by SERS Coupled with Transformers.  https://github.com/BioinfoMachineLearning/SERSFormer.git
 
 
